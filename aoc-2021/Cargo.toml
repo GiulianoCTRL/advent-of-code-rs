@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/01-depth",
+    "src/02-dive",
+]

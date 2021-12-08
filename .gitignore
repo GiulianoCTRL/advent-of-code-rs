@@ -1,0 +1,9 @@
+# Target
+*/Cargo.lock
+*/*/Cargo.lock
+*/target
+*/*/target
+*/*/*/target
+
+# Input
+*/*/*/input.txt
