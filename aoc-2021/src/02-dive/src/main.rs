@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::{self, prelude::*, BufReader};
 
 fn main() {
-    let (ans_i, ans_ii) = get_final_pos(&file_to_vec().expect("Could not read input."));
+    let (ans_i, ans_ii) = get_final_pos(&file_to_vec_lines().expect("Could not read input."));
     println!("Part I: {}, part II: {}", ans_i, ans_ii);
 }
 
-fn file_to_vec() -> io::Result<Vec<String>> {
+fn file_to_vec_lines() -> io::Result<Vec<String>> {
     //! Read filename (from args) into vector of strings
     let args: Vec<String> = env::args().collect();
     let lines: Vec<String> = BufReader::new(File::open(&args[args.len() - 1])?)

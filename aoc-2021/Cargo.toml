@@ -1,5 +1,7 @@
 [workspace]
 members = [
+    "src/00-helpers",
     "src/01-depth",
     "src/02-dive",
+    "src/03-diagnostics",
 ]
