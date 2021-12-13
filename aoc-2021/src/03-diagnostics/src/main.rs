@@ -1,7 +1,7 @@
 mod diagnose;
 
 fn main() {
-    let input: Vec<String> = helpers::input().expect("Couldn't open file.");
+    let input: Vec<String> = helpers::input();
     let bit_size = input[0].chars().count();
 
     let power = diagnose::calc_power_cons(&input, bit_size);
