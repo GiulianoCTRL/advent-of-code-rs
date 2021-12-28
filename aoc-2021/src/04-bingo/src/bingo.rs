@@ -1,3 +1,81 @@
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct BingoBoard {
+    board: [[u32; 5]; 5],
+    mask: [[bool; 5]; 5],
+}
+
+impl BingoBoard {
+    fn new(rows: &[Vec<u32>]) -> BingoBoard {
+        let mut board = [[0u32; 5]; 5];
+        for i in 0..5 {
+            board[i] = rows[i].to_vec().try_into().unwrap();
+        }
+        BingoBoard {
+            board,
+            mask: [[false; 5]; 5],
+        }
+    }
+
+    fn check_number(mut self, num: &u32) {
+        for (i, row) in self.board.iter().enumerate() {
+            for (j, n) in row.iter().enumerate() {
+                if n == num {
+                    self.mask[i][j] = true;
+                    println!("{:?}", self.mask);
+                }
+            }
+        }
+    }
+
+    fn board_won(self) -> bool {
+        for row in self.mask.iter() {
+            if row.iter().all(|i| *i) {
+                println!("{:?}", self.mask);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn calc_result(self, num: u32) -> u32 {
+        //! Calculate result by multiplying the sum of uncalled number bingo numbers
+        //! in the winning board with the last called number.
+        let sum: u32 = self
+            .board
+            .iter()
+            .enumerate()
+            .map(|(ir, r)| {
+                r.iter()
+                    .enumerate()
+                    .filter(|i| !self.mask[ir][i.0])
+                    .map(|i| *i.1)
+                    .sum::<u32>()
+            })
+            .sum();
+        sum * num
+    }
+}
+
+pub fn get_bingo_boards(input: &[String]) -> Vec<BingoBoard> {
+    let mut boards: Vec<BingoBoard> = Vec::new();
+    let mut board: Vec<Vec<u32>> = Vec::new();
+    for (i, line) in input.iter().filter(|l| !l.is_empty()).enumerate() {
+        board.push(
+            line.trim()
+                .split(' ')
+                .collect::<Vec<&str>>()
+                .iter()
+                .filter_map(|s| s.trim().parse::<u32>().ok())
+                .collect(),
+        );
+        if i % 5 == 4 {
+            boards.push(BingoBoard::new(&board));
+            board = Vec::new();
+        }
+    }
+    boards
+}
+
 pub fn get_bingo_nums(nums: &str) -> Vec<u32> {
     //! Read a string reference of comma separated numbers and return them
     //! as vector of u32s.
@@ -9,78 +87,27 @@ pub fn get_bingo_nums(nums: &str) -> Vec<u32> {
         .collect::<Vec<u32>>()
 }
 
-pub fn get_bingo_boards(input: &[String]) -> Vec<Vec<Vec<u32>>> {
-    //! Iterate over input and create a 3 dimensional vector from it.
-    //! Contents are [board][row][number]
-    let mut boards: Vec<Vec<Vec<u32>>> = Vec::new();
-    let mut board = 0usize;
-    let mut row = 0usize;
-    for line in input.iter() {
-        if line.is_empty() {
-            continue;
-        }
-        if row == 5 {
-            row = 0;
-            board += 1;
-        }
-        let nums: Vec<u32> = line
-            .trim()
-            .split(' ')
-            .collect::<Vec<&str>>()
-            .iter()
-            .filter_map(|s| s.trim().parse::<u32>().ok())
-            .collect();
-        if row == 0 {
-            boards.push(
-                (0..5)
-                    .map(|_| Vec::with_capacity(5))
-                    .collect::<Vec<Vec<u32>>>(),
-            )
-        }
-        boards[board][row] = nums;
-        row += 1;
-    }
-    boards
-}
-
-pub fn get_result(boards: &[Vec<Vec<u32>>], bingo_input: &[u32]) -> Option<u32> {
+#[allow(clippy::if_same_then_else)]
+pub fn get_result(boards: &mut [BingoBoard], bingo_input: &[u32], part1: bool) -> Option<u32> {
     //! Create a bool mask for each board and flip the previous false value to true
     //! if the number is called. If a row evaluates to true, the board will be selected
     //! as winning board and the result calculation will be returned.
-    let mut mask: Vec<Vec<Vec<bool>>> = vec![vec![vec![false; 5]; 5]; boards.len()];
-
+    let mut count = 0;
     for n in bingo_input.iter() {
-        for (ib, board) in boards.iter().enumerate() {
-            for (ir, row) in board.iter().enumerate() {
-                for (ii, i) in row.iter().enumerate() {
-                    if i == n {
-                        mask[ib][ir][ii] = true;
-                    }
-                }
-                if mask[ib][ir].iter().all(|i| *i) {
-                    return Some(calc_result(*n, &boards[ib], &mask[ib]));
+        for board in boards.iter() {
+            board.check_number(n);
+            if board.board_won() {
+                println!("Here we are");
+                count += 1;
+                if part1 {
+                    return Some(board.calc_result(*n));
+                } else if count == 100 {
+                    return Some(board.calc_result(*n));
                 }
             }
         }
     }
     None
-}
-
-fn calc_result(num: u32, board: &[Vec<u32>], mask: &[Vec<bool>]) -> u32 {
-    //! Calculate result by multiplying the sum of uncalled number bingo numbers
-    //! in the winning board with the last called number.
-    let sum: u32 = board
-        .iter()
-        .enumerate()
-        .map(|(ir, r)| {
-            r.iter()
-                .enumerate()
-                .filter(|i| !mask[ir][i.0])
-                .map(|i| *i.1)
-                .sum::<u32>()
-        })
-        .sum();
-    sum * num
 }
 
 #[cfg(test)]
@@ -112,87 +139,40 @@ mod tests {
             "95 69 68 53 93".to_string(),
             "".to_string(),
         ];
-        let expected: Vec<Vec<Vec<u32>>> = vec![
-            vec![
-                vec![12u32, 75, 58, 21, 87],
-                vec![55u32, 80, 14, 63, 17],
-                vec![37u32, 35, 76, 92, 56],
-                vec![72u32, 68, 51, 19, 38],
-                vec![91u32, 60, 34, 30, 88],
-            ],
-            vec![
-                vec![0u32, 66, 5, 51, 8],
-                vec![45u32, 57, 31, 3, 62],
-                vec![7u32, 60, 40, 29, 90],
-                vec![80u32, 19, 47, 86, 81],
-                vec![95u32, 69, 68, 53, 93],
-            ],
+        let expected: Vec<BingoBoard> = vec![
+            BingoBoard {
+                board: [
+                    [12u32, 75, 58, 21, 87],
+                    [55u32, 80, 14, 63, 17],
+                    [37u32, 35, 76, 92, 56],
+                    [72u32, 68, 51, 19, 38],
+                    [91u32, 60, 34, 30, 88],
+                ],
+                mask: [
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                ],
+            },
+            BingoBoard {
+                board: [
+                    [0u32, 66, 5, 51, 8],
+                    [45u32, 57, 31, 3, 62],
+                    [7u32, 60, 40, 29, 90],
+                    [80u32, 19, 47, 86, 81],
+                    [95u32, 69, 68, 53, 93],
+                ],
+                mask: [
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                    [false, false, false, false, false],
+                ],
+            },
         ];
         assert_eq!(get_bingo_boards(&input), expected);
-    }
-
-    #[test]
-    fn test_calc_result() {
-        let num = 88;
-        let board: Vec<Vec<u32>> = vec![
-            vec![12u32, 75, 58, 21, 87],
-            vec![55u32, 80, 14, 63, 17],
-            vec![37u32, 35, 76, 92, 56],
-            vec![72u32, 68, 51, 19, 38],
-            vec![91u32, 60, 34, 30, 88],
-        ];
-        let mask: Vec<Vec<bool>> = vec![
-            vec![false, true, false, true, true],
-            vec![true, false, true, true, true],
-            vec![true, true, true, true, false],
-            vec![false, true, true, true, true],
-            vec![false, false, false, false, false],
-        ];
-        let expected = (12u32 + 58 + 80 + 56 + 72 + 91 + 60 + 34 + 30 + 88) * 88;
-        assert_eq!(calc_result(num, &board, &mask), expected);
-    }
-
-    #[test]
-    fn test_get_result() {
-        let boards: Vec<Vec<Vec<u32>>> = vec![
-            vec![
-                vec![12u32, 75, 58, 21, 87],
-                vec![55u32, 80, 14, 63, 17],
-                vec![37u32, 35, 76, 92, 56],
-                vec![72u32, 68, 51, 19, 38],
-                vec![91u32, 60, 34, 30, 88],
-            ],
-            vec![
-                vec![0u32, 66, 5, 51, 8],
-                vec![45u32, 57, 31, 3, 62],
-                vec![7u32, 60, 40, 29, 90],
-                vec![80u32, 19, 47, 86, 81],
-                vec![95u32, 69, 68, 53, 93],
-            ],
-        ];
-        let bingo_nums = vec![45u32, 57, 31, 3, 62];
-        let expected = Some(
-            (66u32
-                + 5
-                + 51
-                + 8
-                + 7
-                + 60
-                + 40
-                + 29
-                + 90
-                + 80
-                + 19
-                + 47
-                + 86
-                + 81
-                + 95
-                + 69
-                + 68
-                + 53
-                + 93)
-                * 62,
-        );
-        assert_eq!(get_result(&boards, &bingo_nums), expected);
     }
 }

@@ -24,12 +24,20 @@ mod bingo;
 fn main() {
     let input = helpers::input();
     let bingo_nums: Vec<u32> = bingo::get_bingo_nums(&input[0]);
-    let bingo_boards: Vec<Vec<Vec<u32>>> = bingo::get_bingo_boards(&input[1..]);
-    let result = bingo::get_result(&bingo_boards, &bingo_nums);
+    let mut bingo_boards: Vec<bingo::BingoBoard> = bingo::get_bingo_boards(&input[2..]);
 
-    if let Some(i) = result {
+    let result_i = bingo::get_result(&mut bingo_boards, &bingo_nums, true);
+    let result_ii = bingo::get_result(&mut bingo_boards, &bingo_nums, false);
+
+    if let Some(i) = result_i {
         println!("{}", i);
     } else {
-        println!("No winner found.");
+        println!("No winner found in part i.");
+    }
+
+    if let Some(i) = result_ii {
+        println!("{}", i);
+    } else {
+        println!("No winner found in part ii.");
     }
 }
