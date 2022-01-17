@@ -6,6 +6,9 @@ pub struct Board {
     mask: HashMap<i32, Vec<bool>>,
 }
 
+type Boards = HashMap<usize, Board>;
+type BingoData = (Vec<u32>, Boards);
+
 impl Board {
     fn from_str(s: &str) -> Board {
         let (board, mask): (HashMap<i32, Vec<u32>>, HashMap<i32, Vec<bool>>) =
@@ -39,13 +42,87 @@ impl Board {
             }
         })
     }
+
+    fn has_won(&mut self) -> bool {
+        self.mask
+            .iter()
+            .map(|(_, v)| v.iter().all(|b| *b))
+            .collect::<Vec<bool>>()
+            .iter()
+            .any(|b| *b)
+    }
+
+    fn calc_result(&mut self, last_num: &u32) -> u32 {
+        self.board
+            .iter()
+            .filter(|(k, _v)| k > &&0)
+            .fold(0u32, |acc, (k, v)| {
+                acc + v
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _n)| !self.mask.get(k).unwrap()[*i])
+                    .map(|(_i, n)| n)
+                    .sum::<u32>()
+            })
+            * last_num
+    }
 }
 
-pub fn to_boards(input: &[&str]) -> HashMap<usize, Board> {
-    input.iter().enumerate().fold(HashMap::new(), | mut acc, (i, b)| {
-        acc.insert(i, Board::from_str(b));
-        acc
-    })
+fn to_nums(s: &str) -> Vec<u32> {
+    s.split(',')
+        .map(|n| n.trim().parse::<u32>().unwrap())
+        .collect()
+}
+
+fn to_boards(input: &[&str]) -> Boards {
+    input
+        .iter()
+        .enumerate()
+        .fold(HashMap::new(), |mut acc, (i, b)| {
+            acc.insert(i, Board::from_str(b));
+            acc
+        })
+}
+
+fn get_bingo_data(s: &str) -> BingoData {
+    s.split_once("\n\n")
+        .map(|t| {
+            (
+                to_nums(t.0),
+                to_boards(&t.1.split("\n\n").collect::<Vec<&str>>()),
+            )
+        })
+        .unwrap()
+}
+
+fn get_winner_data(s: &str) -> (Vec<usize>, Vec<u32>) {
+    let mut data: BingoData = get_bingo_data(s);
+    let mut win_order: Vec<usize> = Vec::new();
+    let mut win_result: Vec<u32> = Vec::new();
+    for num in data.0.iter_mut() {
+        let winners = win_order.to_vec();
+        for (k, v) in data.1.iter_mut().filter(|(k, _v)| !winners.contains(k)) {
+            v.mark_num(num);
+            if v.has_won() {
+                win_result.push(v.calc_result(num));
+                win_order.push(*k);
+            }
+        }
+    }
+    (win_order, win_result)
+}
+
+pub fn announce_winners(s: &str) {
+    let winners = get_winner_data(s);
+    let last = winners.0.len() - 1;
+    println!(
+        "The first winner is board no.: {} with a score of {}.",
+        winners.0[0], winners.1[0]
+    );
+    println!(
+        "The last to win is board no.: {} with a score of {}",
+        winners.0[last], winners.1[last]
+    );
 }
 
 #[cfg(test)]
@@ -102,5 +179,23 @@ mod tests {
         let mut result = Board::test_setup();
         result.mark_num(&92);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_has_won() {
+        let mut input = Board::test_setup();
+        [55u32, 80, 14, 63, 17]
+            .iter()
+            .for_each(|i| input.mark_num(i));
+        assert_eq!(input.has_won(), true);
+    }
+
+    #[test]
+    fn test_calc_result() {
+        let mut input = Board::test_setup();
+        [55u32, 80, 14, 63, 17]
+            .iter()
+            .for_each(|i| input.mark_num(i));
+        assert_eq!(input.calc_result(&17), 18700)
     }
 }
