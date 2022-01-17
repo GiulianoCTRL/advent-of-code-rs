@@ -2,7 +2,6 @@ use std::env;
 use std::fs::File;
 use std::io::{self, prelude::*, BufReader};
 
-
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
 
@@ -17,11 +16,10 @@ fn main() -> io::Result<()> {
 
     // part II
     let count = part_ii(&nums);
-    
+
     println!("Count part II: {}", count);
     Ok(())
 }
-
 
 fn part_i(nums: &[i32]) -> i32 {
     //! Iterate through slice of integers and add to count if the previous
@@ -38,7 +36,6 @@ fn part_i(nums: &[i32]) -> i32 {
     count
 }
 
-
 fn part_ii(nums: &[i32]) -> i32 {
     //! Combine nums in pairs of three and iterate through them and
     //! add to count if the previous integer was higher than the current one
@@ -48,7 +45,7 @@ fn part_ii(nums: &[i32]) -> i32 {
         if i < 2 {
             continue;
         }
-        sums.push(nums[i -2] + nums[i - 1]+ nums[i]);
+        sums.push(nums[i - 2] + nums[i - 1] + nums[i]);
     }
     for (i, _) in sums.iter().enumerate() {
         if i == 0 {
